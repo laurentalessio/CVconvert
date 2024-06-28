@@ -68,26 +68,29 @@ if uploaded_pdf and api_key:
     st.text(text)
     
     # Extract entities using OpenAI
-    extracted_text = extract_entities(text, api_key)
-    st.text("Extracted Entities Text:")
-    st.text(extracted_text)
-    
-    # Parse the extracted text
-    user_data = parse_entities(extracted_text)
-    st.json(user_data)
-    
-    # Load the template
-    template_path = os.path.join(os.path.dirname(__file__), "CV_Martin_Boddy_THREE60_2024.docx")
-    doc = Document(template_path)
-    
-    # Fill the template
-    filled_doc = fill_template(doc, user_data)
-    
-    # Save the document and provide download link
-    docx_file = save_document(filled_doc)
-    st.download_button(
-        label="Download the completed CV",
-        data=docx_file,
-        file_name="Completed_CV.docx",
-        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-    )
+    try:
+        extracted_text = extract_entities(text, api_key)
+        st.text("Extracted Entities Text:")
+        st.text(extracted_text)
+        
+        # Parse the extracted text
+        user_data = parse_entities(extracted_text)
+        st.json(user_data)
+        
+        # Load the template
+        template_path = os.path.join(os.path.dirname(__file__), "CV_Martin_Boddy_THREE60_2024.docx")
+        doc = Document(template_path)
+        
+        # Fill the template
+        filled_doc = fill_template(doc, user_data)
+        
+        # Save the document and provide download link
+        docx_file = save_document(filled_doc)
+        st.download_button(
+            label="Download the completed CV",
+            data=docx_file,
+            file_name="Completed_CV.docx",
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        )
+    except Exception as e:
+        st.error(f"An error occurred: {e}")
