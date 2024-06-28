@@ -7,3 +7,4 @@ pandas
 reportlab
 logging
 PyPDF2
+python-docx
