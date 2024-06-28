@@ -2,10 +2,7 @@ import streamlit as st
 from docx import Document
 from io import BytesIO
 import pdfplumber
-import spacy
-
-# Load SpaCy English model
-nlp = spacy.load("en_core_web_sm")
+import re
 
 def extract_text_from_first_page(pdf_file):
     with pdfplumber.open(pdf_file) as pdf:
@@ -14,7 +11,6 @@ def extract_text_from_first_page(pdf_file):
     return text
 
 def parse_pdf_text(text):
-    doc = nlp(text)
     user_data = {
         "[NAME]": "",
         "[ADDRESS]": "",
@@ -25,32 +21,39 @@ def parse_pdf_text(text):
         "[EDUCATION]": "",
         "[SKILLS]": "",
     }
-    
-    for ent in doc.ents:
-        if ent.label_ == "PERSON":
-            user_data["[NAME]"] = ent.text
-        elif ent.label_ == "GPE":  # Geopolitical entity, used for addresses
-            user_data["[ADDRESS]"] = ent.text
-        elif ent.label_ == "ORG":  # Organizations, might be useful for experience
-            user_data["[EXPERIENCE]"] += ent.text + "\n"
-        elif ent.label_ == "DATE":  # Dates, might be useful for education and experience
-            user_data["[EDUCATION]"] += ent.text + "\n"
-        elif "@" in ent.text:
-            user_data["[EMAIL]"] = ent.text
-        elif ent.label_ == "CARDINAL":  # Basic way to capture phone numbers
-            user_data["[PHONE]"] = ent.text
 
-    # Additional heuristic parsing for summary and skills
-    summary_start = text.lower().find("summary:")
-    if summary_start != -1:
-        summary_end = text.find("\n", summary_start)
-        user_data["[SUMMARY]"] = text[summary_start + 8:summary_end].strip()
+    name_match = re.search(r"Name:\s*(.*)", text)
+    if name_match:
+        user_data["[NAME]"] = name_match.group(1).strip()
 
-    skills_start = text.lower().find("skills:")
-    if skills_start != -1:
-        skills_end = text.find("\n", skills_start)
-        user_data["[SKILLS]"] = text[skills_start + 7:skills_end].strip()
-    
+    address_match = re.search(r"Address:\s*(.*)", text)
+    if address_match:
+        user_data["[ADDRESS]"] = address_match.group(1).strip()
+
+    phone_match = re.search(r"Phone:\s*(.*)", text)
+    if phone_match:
+        user_data["[PHONE]"] = phone_match.group(1).strip()
+
+    email_match = re.search(r"Email:\s*(.*)", text)
+    if email_match:
+        user_data["[EMAIL]"] = email_match.group(1).strip()
+
+    summary_match = re.search(r"Summary:\s*(.*)", text, re.DOTALL)
+    if summary_match:
+        user_data["[SUMMARY]"] = summary_match.group(1).strip()
+
+    experience_match = re.search(r"Experience:\s*(.*)", text, re.DOTALL)
+    if experience_match:
+        user_data["[EXPERIENCE]"] = experience_match.group(1).strip()
+
+    education_match = re.search(r"Education:\s*(.*)", text, re.DOTALL)
+    if education_match:
+        user_data["[EDUCATION]"] = education_match.group(1).strip()
+
+    skills_match = re.search(r"Skills:\s*(.*)", text, re.DOTALL)
+    if skills_match:
+        user_data["[SKILLS]"] = skills_match.group(1).strip()
+
     return user_data
 
 def fill_template(doc, user_data):
@@ -76,7 +79,7 @@ if uploaded_pdf:
     st.text("Extracted Text:")
     st.text(text)
     
-    # Parse the extracted text using NLP
+    # Parse the extracted text
     user_data = parse_pdf_text(text)
     st.json(user_data)
     
