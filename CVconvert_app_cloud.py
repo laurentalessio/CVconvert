@@ -2,7 +2,9 @@ import streamlit as st
 from docx import Document
 from io import BytesIO
 import pdfplumber
+import openai
 import re
+import os
 
 def extract_text_from_first_page(pdf_file):
     with pdfplumber.open(pdf_file) as pdf:
@@ -10,7 +12,19 @@ def extract_text_from_first_page(pdf_file):
         text = first_page.extract_text()
     return text
 
-def parse_pdf_text(text):
+def extract_entities(text, api_key):
+    openai.api_key = api_key
+    response = openai.Completion.create(
+        engine="text-davinci-003",
+        prompt=f"Extract the following entities from the text: Name, Address, Phone, Email, Summary, Experience, Education, Skills. Text: {text}",
+        max_tokens=500,
+        n=1,
+        stop=None,
+        temperature=0.7,
+    )
+    return response.choices[0].text
+
+def parse_entities(extracted_text):
     user_data = {
         "[NAME]": "",
         "[ADDRESS]": "",
@@ -21,39 +35,11 @@ def parse_pdf_text(text):
         "[EDUCATION]": "",
         "[SKILLS]": "",
     }
-
-    name_match = re.search(r"Name:\s*(.*)", text)
-    if name_match:
-        user_data["[NAME]"] = name_match.group(1).strip()
-
-    address_match = re.search(r"Address:\s*(.*)", text)
-    if address_match:
-        user_data["[ADDRESS]"] = address_match.group(1).strip()
-
-    phone_match = re.search(r"Phone:\s*(.*)", text)
-    if phone_match:
-        user_data["[PHONE]"] = phone_match.group(1).strip()
-
-    email_match = re.search(r"Email:\s*(.*)", text)
-    if email_match:
-        user_data["[EMAIL]"] = email_match.group(1).strip()
-
-    summary_match = re.search(r"Summary:\s*(.*)", text, re.DOTALL)
-    if summary_match:
-        user_data["[SUMMARY]"] = summary_match.group(1).strip()
-
-    experience_match = re.search(r"Experience:\s*(.*)", text, re.DOTALL)
-    if experience_match:
-        user_data["[EXPERIENCE]"] = experience_match.group(1).strip()
-
-    education_match = re.search(r"Education:\s*(.*)", text, re.DOTALL)
-    if education_match:
-        user_data["[EDUCATION]"] = education_match.group(1).strip()
-
-    skills_match = re.search(r"Skills:\s*(.*)", text, re.DOTALL)
-    if skills_match:
-        user_data["[SKILLS]"] = skills_match.group(1).strip()
-
+    for key in user_data.keys():
+        pattern = re.compile(rf"{key}:(.*?)(\n|$)")
+        match = pattern.search(extracted_text)
+        if match:
+            user_data[key] = match.group(1).strip()
     return user_data
 
 def fill_template(doc, user_data):
@@ -72,19 +58,26 @@ def save_document(doc):
 # Streamlit application
 st.title("Three60 CV Generator")
 
+api_key = st.text_input("Enter your OpenAI API key:", type="password")
+
 uploaded_pdf = st.file_uploader("Upload the candidate's PDF CV", type="pdf")
-if uploaded_pdf:
+if uploaded_pdf and api_key:
     # Extract text from PDF
     text = extract_text_from_first_page(uploaded_pdf)
     st.text("Extracted Text:")
     st.text(text)
     
+    # Extract entities using OpenAI
+    extracted_text = extract_entities(text, api_key)
+    st.text("Extracted Entities Text:")
+    st.text(extracted_text)
+    
     # Parse the extracted text
-    user_data = parse_pdf_text(text)
+    user_data = parse_entities(extracted_text)
     st.json(user_data)
     
     # Load the template
-    template_path = "CV_Martin_Boddy_THREE60_2024.docx"  # Path to the template
+    template_path = os.path.join(os.path.dirname(__file__), "CV_Martin_Boddy_THREE60_2024.docx")
     doc = Document(template_path)
     
     # Fill the template
