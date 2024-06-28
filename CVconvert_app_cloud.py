@@ -6,10 +6,11 @@ import openai
 import re
 import os
 
-def extract_text_from_first_page(pdf_file):
+def extract_text_from_pdf(pdf_file):
     with pdfplumber.open(pdf_file) as pdf:
-        first_page = pdf.pages[0]
-        text = first_page.extract_text()
+        text = ""
+        for page in pdf.pages:
+            text += page.extract_text() + "\n"
     return text
 
 def extract_entities(text, api_key):
@@ -20,7 +21,7 @@ def extract_entities(text, api_key):
             {"role": "system", "content": "You are a helpful assistant that extracts information from CVs."},
             {"role": "user", "content": f"Extract the following entities from the text: Name, Address, Phone, Email, Summary, Experience, Education, Skills. Text: {text}"}
         ],
-        max_tokens=500,
+        max_tokens=1000,
         n=1,
         temperature=0.7,
     )
@@ -38,7 +39,7 @@ def parse_entities(extracted_text):
         "[SKILLS]": "",
     }
     for key in user_data.keys():
-        pattern = re.compile(rf"{key.strip('[]')}:(.*?)(\n|$)", re.IGNORECASE | re.DOTALL)
+        pattern = re.compile(rf"{key.strip('[]')}:(.*?)(\n\n|\Z)", re.IGNORECASE | re.DOTALL)
         match = pattern.search(extracted_text)
         if match:
             user_data[key] = match.group(1).strip()
@@ -63,39 +64,17 @@ st.title("Three60 CV Generator")
 api_key = st.text_input("Enter your OpenAI API key (optional):", type="password")
 api_key = api_key or os.getenv("OPENAI_API_KEY")
 
-input_option = st.radio("Choose input method:", ("Upload PDF", "Enter CV text", "Load example CV"))
+uploaded_pdf = st.file_uploader("Upload the candidate's PDF CV", type="pdf")
 
-if input_option == "Upload PDF":
-    uploaded_pdf = st.file_uploader("Upload the candidate's PDF CV", type="pdf")
-    if uploaded_pdf:
-        text = extract_text_from_first_page(uploaded_pdf)
-elif input_option == "Enter CV text":
-    text = st.text_area("Enter the CV text:", height=300)
-else:
-    example_cv = """John Doe
-Email: john.doe@email.com
-Phone: (123) 456-7890
-Address: 123 Main St, Anytown, USA
-
-Summary:
-Experienced software engineer with a passion for developing innovative solutions.
-
-Experience:
-Software Engineer, Tech Corp, 2019-Present
-- Developed and maintained web applications
-- Collaborated with cross-functional teams
-
-Education:
-Bachelor of Science in Computer Science, University of XYZ, 2015-2019
-
-Skills:
-Python, JavaScript, SQL, Git"""
-    text = st.text_area("Example CV:", value=example_cv, height=300)
-
-if st.button("Generate CV") and api_key:
-    if text:
+if uploaded_pdf and api_key:
+    if st.button("Generate CV"):
         try:
             with st.spinner("Processing CV..."):
+                # Extract text from PDF
+                text = extract_text_from_pdf(uploaded_pdf)
+                st.text("Extracted Text from PDF:")
+                st.text(text[:500] + "...") # Show first 500 characters
+                
                 # Extract entities using OpenAI
                 extracted_text = extract_entities(text, api_key)
                 st.text("Extracted Entities:")
@@ -122,7 +101,7 @@ if st.button("Generate CV") and api_key:
                 )
         except Exception as e:
             st.error(f"An error occurred: {str(e)}")
-    else:
-        st.warning("Please provide a CV to process.")
+elif not uploaded_pdf:
+    st.warning("Please upload a PDF CV to process.")
 elif not api_key:
     st.warning("Please enter an OpenAI API key to use this application.")
