@@ -1,4 +1,9 @@
-streamlit==1.10.0
-python-docx==0.8.11
-pdfplumber==0.11.1
-openai==0.27.0
+streamlit
+pdfplumber
+openai>=1.0.0
+python-dotenv
+plotly
+pandas
+reportlab
+logging
+PyPDF2
