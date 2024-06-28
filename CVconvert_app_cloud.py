@@ -1,15 +1,16 @@
 import streamlit as st
 from docx import Document
 from io import BytesIO
-import fitz  # PyMuPDF
+import pdfplumber
 import spacy
 
 # Load SpaCy English model
 nlp = spacy.load("en_core_web_sm")
 
 def extract_text_from_first_page(pdf_file):
-    doc = fitz.open(stream=pdf_file.read(), filetype="pdf")
-    text = doc[0].get_text()
+    with pdfplumber.open(pdf_file) as pdf:
+        first_page = pdf.pages[0]
+        text = first_page.extract_text()
     return text
 
 def parse_pdf_text(text):
@@ -23,7 +24,6 @@ def parse_pdf_text(text):
         "[EXPERIENCE]": "",
         "[EDUCATION]": "",
         "[SKILLS]": "",
-        # add more fields as needed
     }
     
     for ent in doc.ents:
@@ -35,18 +35,18 @@ def parse_pdf_text(text):
             user_data["[EXPERIENCE]"] += ent.text + "\n"
         elif ent.label_ == "DATE":  # Dates, might be useful for education and experience
             user_data["[EDUCATION]"] += ent.text + "\n"
-        elif ent.label_ == "EMAIL":
+        elif "@" in ent.text:
             user_data["[EMAIL]"] = ent.text
-        elif ent.label_ == "PHONE":
+        elif ent.label_ == "CARDINAL":  # Basic way to capture phone numbers
             user_data["[PHONE]"] = ent.text
 
     # Additional heuristic parsing for summary and skills
-    summary_start = text.find("Summary:")
+    summary_start = text.lower().find("summary:")
     if summary_start != -1:
         summary_end = text.find("\n", summary_start)
         user_data["[SUMMARY]"] = text[summary_start + 8:summary_end].strip()
 
-    skills_start = text.find("Skills:")
+    skills_start = text.lower().find("skills:")
     if skills_start != -1:
         skills_end = text.find("\n", skills_start)
         user_data["[SKILLS]"] = text[skills_start + 7:skills_end].strip()
