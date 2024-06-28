@@ -11,3 +11,4 @@ python-docx
 streamlit==1.10.0
 python-docx==0.8.11
 PyMuPDF==1.18.19
+spacy==3.2.0
