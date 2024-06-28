@@ -12,8 +12,10 @@ def read_pdf(file):
         text += page.extract_text()
     return text
 
+from openai import OpenAI
+
 def process_cv(consultant_cv, template_cv, api_key):
-    openai.api_key = api_key
+    client = OpenAI(api_key=api_key)
     try:
         prompt = f"""
         You are a CV formatting assistant. Format the following consultant CV according to the THREE60 template provided below. 
@@ -44,14 +46,14 @@ def process_cv(consultant_cv, template_cv, api_key):
         Please provide the formatted CV in a form that can be easily copied into a Word document.
         """
 
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(
             model="gpt-4",
             messages=[
                 {"role": "system", "content": "You are a CV formatting assistant."},
                 {"role": "user", "content": prompt}
             ]
         )
-        return response.choices[0].message['content']
+        return response.choices[0].message.content
     except Exception as e:
         st.error(f"Error processing CV: {str(e)}")
         return None
