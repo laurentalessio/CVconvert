@@ -28,13 +28,19 @@ def process_cv(consultant_cv, template_cv, api_key):
         Format the following consultant CV according to the THREE60 template provided below. 
         Maintain the exact structure, headings, and order of sections as in the template.
         Do not add any sections that are not in the template.
-        If information for a section is not available in the consultant's CV, leave that section empty or write 'Information not provided'.
+        If information for a section is not available in the consultant's CV, write 'Information not provided'.
         
         Use the following format:
-        **Section Heading**
+        [HEADER]
+        Name
+        Position
+        [/HEADER]
+
+        [SECTION]Section Heading
         Content for this section
+        [/SECTION]
         
-        Separate each section with a blank line.
+        Ensure all sections from the template are included and in the correct order.
         
         Consultant CV to format:
         {consultant_cv}
@@ -61,20 +67,23 @@ def create_word_document(formatted_cv, template_file):
     # Load the template
     doc = Document(template_file)
     
-    # Clear the content of the template, keeping styles and formatting
-    for paragraph in doc.paragraphs:
-        if paragraph.text and not paragraph.style.name.startswith('Heading'):
-            paragraph.clear()
+    # Parse the formatted CV
+    header = formatted_cv.split('[/HEADER]')[0].replace('[HEADER]', '').strip().split('\n')
+    sections = formatted_cv.split('[SECTION]')[1:]
     
-    # Split the formatted CV into sections
-    sections = formatted_cv.split('\n\n')
-    
-    # Find or create paragraphs for each section and add content
+    # Update the header (usually in the first table)
+    if doc.tables:
+        table = doc.tables[0]
+        if len(table.rows) > 0 and len(table.rows[0].cells) > 0:
+            cell = table.rows[0].cells[0]
+            cell.text = '\n'.join(header)
+
+    # Process each section
     for section in sections:
         lines = section.split('\n')
         if lines:
-            heading = lines[0].strip('*').strip()
-            content = '\n'.join(lines[1:])
+            heading = lines[0].strip()
+            content = '\n'.join(lines[1:]).strip()
             
             # Find existing paragraph with this heading
             for paragraph in doc.paragraphs:
