@@ -1,0 +1,8 @@
+streamlit
+pdfplumber
+openai>=1.0.0
+python-dotenv
+plotly
+pandas
+reportlab
+logging
