@@ -30,6 +30,12 @@ def process_cv(consultant_cv, template_cv, api_key):
         Do not add any sections that are not in the template.
         If information for a section is not available in the consultant's CV, leave that section empty or write 'Information not provided'.
         
+        Use the following format:
+        **Section Heading**
+        Content for this section
+        
+        Separate each section with a blank line.
+        
         Consultant CV to format:
         {consultant_cv}
 
@@ -60,29 +66,32 @@ def create_word_document(formatted_cv, template_file):
         if paragraph.text and not paragraph.style.name.startswith('Heading'):
             paragraph.clear()
     
-    # Split the formatted CV into lines
-    lines = formatted_cv.split('\n')
+    # Split the formatted CV into sections
+    sections = formatted_cv.split('\n\n')
     
-    current_paragraph = None
-    for line in lines:
-        line = line.strip()
-        if not line:
-            continue
-        
-        if line.startswith('**') and line.endswith('**'):
-            # This is a heading
-            text = line.strip('**').strip()
+    # Find or create paragraphs for each section and add content
+    for section in sections:
+        lines = section.split('\n')
+        if lines:
+            heading = lines[0].strip('*').strip()
+            content = '\n'.join(lines[1:])
+            
+            # Find existing paragraph with this heading
             for paragraph in doc.paragraphs:
-                if paragraph.text.strip() == text:
-                    current_paragraph = paragraph
+                if paragraph.text.strip() == heading:
+                    # Clear existing content
+                    paragraph.clear()
+                    # Add new content
+                    paragraph.add_run(heading).bold = True
+                    if content:
+                        paragraph.add_run('\n' + content)
                     break
             else:
-                current_paragraph = doc.add_paragraph(text)
-                current_paragraph.style = 'Heading 1'
-        elif current_paragraph is not None:
-            current_paragraph.add_run('\n' + line)
-        else:
-            current_paragraph = doc.add_paragraph(line)
+                # If heading not found, create new paragraph
+                new_para = doc.add_paragraph()
+                new_para.add_run(heading).bold = True
+                if content:
+                    new_para.add_run('\n' + content)
     
     # Save the document to a bytes buffer
     doc_buffer = io.BytesIO()
