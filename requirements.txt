@@ -6,3 +6,4 @@ plotly
 pandas
 reportlab
 logging
+PyPDF
