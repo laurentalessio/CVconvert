@@ -25,36 +25,68 @@ def process_cv(consultant_cv, template_cv, api_key):
     client = OpenAI(api_key=api_key)
     try:
         prompt = f"""
-        Format the following consultant CV according to the THREE60 template provided below. 
-        Maintain the exact structure, headings, and order of sections as in the template.
-        Do not add any sections that are not in the template.
-        If information for a section is not available in the consultant's CV, write 'Information not provided'.
+        You are tasked with formatting a consultant's CV according to the THREE60 template structure.
+        Use ONLY the information from the consultant's CV. DO NOT use any specific information from the template CV.
         
-        Use the following format:
+        The structure should be as follows:
         [HEADER]
-        Name
-        Position
+        Consultant's Name
+        Consultant's Current Position
         [/HEADER]
 
-        [SECTION]Section Heading
-        Content for this section
+        [SECTION]Years of experience
+        Content
         [/SECTION]
-        
-        Ensure all sections from the template are included and in the correct order.
-        
+
+        [SECTION]Discipline
+        Content
+        [/SECTION]
+
+        [SECTION]Role
+        Content
+        [/SECTION]
+
+        [SECTION]Technical skills
+        Content
+        [/SECTION]
+
+        [SECTION]Professional skills
+        Content
+        [/SECTION]
+
+        [SECTION]Professional Summary
+        Content
+        [/SECTION]
+
+        [SECTION]Work Experience - Summary
+        Content
+        [/SECTION]
+
+        [SECTION]Work Experience - Detailed
+        Content
+        [/SECTION]
+
+        [SECTION]Education and training
+        Content
+        [/SECTION]
+
+        [SECTION]Personal skills and competencies
+        Content
+        [/SECTION]
+
+        Fill each section with relevant information from the consultant's CV. If information for a section is not available, write 'Information not provided' as the content.
+        Do not invent or assume any information not present in the consultant's CV.
+
         Consultant CV to format:
         {consultant_cv}
 
-        Template CV:
-        {template_cv}
-
-        Please provide the formatted CV content, preserving the structure and headings of the template.
+        Please provide the formatted CV content, using ONLY information from the consultant's CV.
         """
 
         response = client.chat.completions.create(
             model="gpt-4",
             messages=[
-                {"role": "system", "content": "You are a CV formatting assistant."},
+                {"role": "system", "content": "You are a CV formatting assistant. Only use information provided in the consultant's CV."},
                 {"role": "user", "content": prompt}
             ]
         )
